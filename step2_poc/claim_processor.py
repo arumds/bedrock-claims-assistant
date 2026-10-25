@@ -41,16 +41,15 @@ def converse(model_id: str, prompt: str, system: str, temperature: float, max_to
                         "output_tokens": r.output_tokens}
     global _bedrock
     if _bedrock is None:
-        import boto3
-        _bedrock = boto3.client("bedrock-runtime", region_name=config.REGION)
+        _bedrock = config.bedrock_runtime()
     content = ([{"document": document}] if document else []) + [{"text": prompt}]
     start = time.perf_counter()
-    resp = _bedrock.converse(
+    resp = config.call_with_backoff(lambda: _bedrock.converse(
         modelId=model_id,
         system=[{"text": system}],
         messages=[{"role": "user", "content": content}],
         inferenceConfig={"temperature": temperature, "maxTokens": max_tokens},
-    )
+    ), what=f"{model_id} call")
     text = "".join(b.get("text", "") for b in resp["output"]["message"]["content"])
     usage = resp.get("usage", {})
     return text.strip(), {"latency_s": round(time.perf_counter() - start, 2),
