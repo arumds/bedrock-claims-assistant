@@ -1,0 +1,21 @@
+MEDICAL EXPENSE REIMBURSEMENT REQUEST
+
+Patient Name: Aisha Rahman
+Member / Policy Number: HLT-2025-77310
+Provider: Meilahti Hospital Emergency Department (out-of-network)
+Date of Service: 3 March 2026
+
+Reason for visit / description:
+Patient attended emergency department with acute abdominal pain on Saturday
+evening. Diagnosed with appendicitis; laparoscopic appendectomy performed the
+same night. Discharged after 2 nights inpatient stay.
+
+Charges:
+  Emergency department visit      890.00
+  Surgery (appendectomy)        6,400.00
+  Inpatient stay (2 nights)     2,100.00
+  Pharmacy on discharge            85.40
+Claim amount: 9,475.40 EUR
+
+Pre-authorisation: not obtained (emergency)
+Attachments: itemised hospital bill, discharge summary
