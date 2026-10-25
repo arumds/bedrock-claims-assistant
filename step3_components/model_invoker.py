@@ -55,7 +55,7 @@ RETRYABLE = {
 class ModelInvoker:
     """One interface for calling any Bedrock model, with retries and metrics."""
     def __init__(self, region: str = config.REGION, mock: bool = config.MOCK_MODE,
-                 max_retries: int = 4):
+                 max_retries: int = 2):
         self.mock = mock
         self.max_retries = max_retries
         self._client = None
@@ -65,14 +65,14 @@ class ModelInvoker:
     def client(self):
         """Lazily created bedrock-runtime client."""
         if self._client is None:
-            import boto3
-            from botocore.config import Config
-
-            self._client = boto3.client(
-                "bedrock-runtime",
-                region_name=self.region,
-                config=Config(read_timeout=120, retries={"max_attempts": 1}),
-            )
+            if self.region == config.REGION:
+                self._client = config.bedrock_runtime()  # shared, adaptive retries
+            else:
+                import boto3
+                from botocore.config import Config
+                self._client = boto3.client(
+                    "bedrock-runtime", region_name=self.region,
+                    config=Config(read_timeout=120, retries={"mode": "adaptive", "max_attempts": 10}))
         return self._client
 
     # ------------------------------------------------------------------ text
@@ -141,6 +141,8 @@ class ModelInvoker:
 
     # --------------------------------------------------------------- helpers
     def _with_retries(self, fn):
+        if self.max_retries:
+            return config.call_with_backoff(fn, what="Bedrock call")
         from botocore.exceptions import ClientError
 
         for attempt in range(self.max_retries + 1):
@@ -150,4 +152,4 @@ class ModelInvoker:
                 code = e.response.get("Error", {}).get("Code", "")
                 if code not in RETRYABLE or attempt == self.max_retries:
                     raise
-                time.sleep(min(2 ** attempt + random.random(), 20))
+                time.sleep(min(2 ** attempt * 2 + random.random(), 30))
