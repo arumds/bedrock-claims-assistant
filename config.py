@@ -3,6 +3,7 @@ variable or a `.env` file in the project root (see `.env.example`)."""
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -65,6 +66,47 @@ def _use_profile_explicitly() -> None:
 
 
 _use_profile_explicitly()
+
+# Pause between the one-time policy-embedding calls (new AWS accounts have low
+# Bedrock request quotas; a short pause avoids ThrottlingException bursts).
+EMBED_DELAY_S = float(os.getenv("EMBED_DELAY_S", "0.5"))
+_BEDROCK_RUNTIME = None
+
+
+THROTTLE_WAITS_S = (5, 10, 20, 30, 30)  # extra waits after botocore's own retries give up
+
+
+def call_with_backoff(fn, what: str = "Bedrock call"):
+    """Run fn(); on throttling/transient errors wait and retry (5s, 10s, 20s, 30s, 30s) before giving up."""
+    from botocore.exceptions import ClientError
+    retryable = {"ThrottlingException", "ServiceUnavailableException", "ModelNotReadyException",
+                 "InternalServerException", "ModelTimeoutException", "TooManyRequestsException"}
+    for attempt, wait in enumerate((*THROTTLE_WAITS_S, None)):
+        try:
+            return fn()
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            if code not in retryable or wait is None:
+                if code == "ThrottlingException":
+                    raise SystemExit(
+                        f"{what} is still throttled after several minutes. Your account's Bedrock quota is "
+                        "very low (common for new accounts). Check Service Quotas -> Amazon Bedrock, "
+                        "wait a while, or try another region (AWS_REGION in .env).") from e
+                raise
+            print(f"   {code}: waiting {wait}s before retrying {what} ({attempt + 1}/{len(THROTTLE_WAITS_S)}) ...")
+            time.sleep(wait)
+
+
+def bedrock_runtime():
+    """One shared bedrock-runtime client with adaptive retries (backs off automatically on throttling)."""
+    global _BEDROCK_RUNTIME
+    if _BEDROCK_RUNTIME is None:
+        import boto3
+        from botocore.config import Config
+        _BEDROCK_RUNTIME = boto3.client(
+            "bedrock-runtime", region_name=REGION,
+            config=Config(read_timeout=120, retries={"mode": "adaptive", "max_attempts": 10}))
+    return _BEDROCK_RUNTIME
 
 # --- Bucket -----------------------------------------------------------------
 BUCKET = os.getenv("CLAIMS_BUCKET", "claim-documents-poc-xyz")
