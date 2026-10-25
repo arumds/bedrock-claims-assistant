@@ -19,6 +19,7 @@ import json
 import math
 import re
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -33,12 +34,10 @@ def embed(text: str) -> list[float]:
     """Embed text with Titan Text Embeddings V2 (or the mock embedding offline)."""
     if config.MOCK_MODE:
         return mock_bedrock.mock_embedding(text)
-    import boto3
-    client = boto3.client("bedrock-runtime", region_name=config.REGION)
-    resp = client.invoke_model(
+    resp = config.call_with_backoff(lambda: config.bedrock_runtime().invoke_model(
         modelId=config.EMBEDDING_MODEL,
         body=json.dumps({"inputText": text[:8000], "dimensions": 512, "normalize": True}),
-    )
+    ), what="embedding")
     return json.loads(resp["body"].read())["embedding"]
 
 
@@ -90,9 +89,14 @@ class PolicyKnowledgeBase:
         self.chunks = []
         for key in keys:
             text = self.store.get_bytes(key).decode("utf-8")
-            for c in chunk_policy(Path(key).name, text):
-                c["embedding"] = embed(c["text"])
-                self.chunks.append(c)
+            self.chunks += chunk_policy(Path(key).name, text)
+        if not config.MOCK_MODE:
+            print(f"Building policy index: embedding {len(self.chunks)} sections with "
+                  f"{config.EMBEDDING_MODEL} (one-time, cached in {INDEX_FILE.name}) ...")
+        for i, c in enumerate(self.chunks):
+            if i and not config.MOCK_MODE:
+                time.sleep(config.EMBED_DELAY_S)
+            c["embedding"] = embed(c["text"])
         INDEX_FILE.write_text(json.dumps({"keys": keys, "model": config.EMBEDDING_MODEL,
                                           "chunks": self.chunks}))
         return self
