@@ -1,0 +1,29 @@
+NORTHWIND MUTUAL INSURANCE - AUTO CLAIM FORM
+
+Claim Reference: CLM-2026-0912
+Claimant Name: Maria Virtanen
+Policy Number: AUTO-2025-004417
+Vehicle: 2022 Toyota Corolla Hybrid, Reg. ABC-123
+Date of Incident: 2026-09-14
+Time: approx. 17:40
+Location: Intersection of Mannerheimintie and Runeberginkatu, Helsinki
+
+Description of Incident:
+While stopped at a red light, my vehicle was struck from behind by another car
+whose driver said their brakes failed on the wet road. The rear bumper, boot lid
+and left tail light were damaged. No injuries. Police were called and report
+no. HPD-26-55812 was filed. The other driver (insured with Baltic General,
+policy BG-889201) admitted fault at the scene.
+
+Repair Estimate (Autokorjaamo Oy):
+  Rear bumper replacement ........ 1,150.00
+  Boot lid repair & paint ........   980.00
+  Tail light assembly ............   310.00
+  Labour .........................   620.00
+Total Amount Claimed: 3,060.00 EUR
+
+Rental car requested: Yes, 6 days
+Attached documents: police report, repair estimate, 8 photos of damage
+
+Contact: maria.virtanen@example.com, +358 40 123 4567
+Signature: M. Virtanen     Date signed: 2026-09-16
